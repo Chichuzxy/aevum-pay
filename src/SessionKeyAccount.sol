@@ -82,7 +82,7 @@ contract SessionKeyAccount {
 
         if (missingAccountFunds > 0) {
             // Prefund the EntryPoint; failures are the EntryPoint's problem, not a validation failure.
-            (bool sent, ) = msg.sender.call{value: missingAccountFunds}("");
+            (bool sent,) = msg.sender.call{value: missingAccountFunds}("");
             sent;
         }
 
