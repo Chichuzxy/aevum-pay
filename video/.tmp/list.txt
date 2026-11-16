@@ -1,0 +1,5 @@
+file 'E:/XZ/tuanduei/BSxm/Aevum Builder Challenge/aevum-pay/video/.tmp/seg1.mp4'
+file 'E:/XZ/tuanduei/BSxm/Aevum Builder Challenge/aevum-pay/video/.tmp/seg2.mp4'
+file 'E:/XZ/tuanduei/BSxm/Aevum Builder Challenge/aevum-pay/video/.tmp/seg3.mp4'
+file 'E:/XZ/tuanduei/BSxm/Aevum Builder Challenge/aevum-pay/video/.tmp/seg4.mp4'
+file 'E:/XZ/tuanduei/BSxm/Aevum Builder Challenge/aevum-pay/video/.tmp/seg5.mp4'

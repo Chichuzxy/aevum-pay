@@ -187,6 +187,8 @@ scripts/4337-demo.mjs         session key userOp + a rejected misuse
 docs/BUSINESS.md              unit economics, buyers, honest limits
 docs/PRACTICE.md              runbook for rehearsing the demo before recording
 docs/RECORDING.md             shot list for the 2.5-minute video
+docs/VIDEO.md                 how the video is assembled (segments + narration, no drift)
+video/build.mjs               deterministic assembly: normalise, sync per narration, subs, mix
 evidence/                     machine-written JSONL from the demo runs
 ```
 
