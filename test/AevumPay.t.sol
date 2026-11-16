@@ -27,6 +27,42 @@ contract MockERC20 {
         balanceOf[to] += amount;
         return true;
     }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        require(balanceOf[msg.sender] >= amount, "balance");
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    // --- EIP-3009 stand-in: the test pre-registers the digest the payer "signed" ---
+    mapping(address => mapping(bytes32 => bool)) public signed;
+    mapping(address => mapping(bytes32 => bool)) public used;
+
+    function sign(address from, bytes32 nonce) external {
+        signed[from][nonce] = true;
+    }
+
+    function receiveWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8,
+        bytes32,
+        bytes32
+    ) external {
+        require(msg.sender == to, "payee");
+        require(signed[from][nonce], "bad sig");
+        require(block.timestamp >= validAfter && block.timestamp < validBefore, "time");
+        require(!used[from][nonce], "replay");
+        used[from][nonce] = true;
+        require(balanceOf[from] >= value, "balance");
+        balanceOf[from] -= value;
+        balanceOf[to] += value;
+    }
 }
 
 contract AevumPayTest is Test {
@@ -122,5 +158,68 @@ contract AevumPayTest is Test {
         vm.prank(carol);
         vm.expectRevert(AevumPay.MerchantMismatch.selector);
         pay.charge(id, RID_OTHER, 1, bytes32("r1"));
+    }
+
+    // ------------------------------------------------------ gasless (EIP-3009)
+
+    uint256 constant SALT = 7;
+
+    function _auth(uint256 salt) internal view returns (AevumPay.Authorization memory) {
+        return AevumPay.Authorization({
+            validAfter: 0,
+            validBefore: block.timestamp + 1 hours,
+            salt: salt,
+            v: 27,
+            r: bytes32(0),
+            s: bytes32(0)
+        });
+    }
+
+    function _gaslessCharge(bytes32 cardId, uint256 units) internal returns (uint256) {
+        vm.prank(carol);
+        return pay.chargeWithAuthorization(cardId, RID, units, keccak256(abi.encode(units)), _auth(SALT));
+    }
+
+    function testGaslessChargePaysMerchantWithNoApproval() public {
+        bytes32 id = _card(50_000, uint64(block.timestamp + 1 days));
+        uint256 before = token.allowance(alice, address(pay));
+        token.sign(alice, pay.authorizationNonce(id, 30_000, SALT));
+
+        uint256 amount = _gaslessCharge(id, 3);
+
+        assertEq(amount, 30_000);
+        assertEq(token.balanceOf(bob), 30_000);
+        assertEq(token.balanceOf(alice), 970_000);
+        assertEq(token.allowance(alice, address(pay)), before, "no allowance needed");
+        assertEq(pay.remaining(id), 20_000);
+        assertEq(pay.receiptCount(), 1);
+    }
+
+    function testGaslessReplayRejected() public {
+        bytes32 id = _card(50_000, uint64(block.timestamp + 1 days));
+        token.sign(alice, pay.authorizationNonce(id, 10_000, SALT));
+        _gaslessCharge(id, 1);
+
+        vm.prank(carol);
+        vm.expectRevert("replay");
+        pay.chargeWithAuthorization(id, RID, 1, bytes32("r2"), _auth(SALT));
+    }
+
+    function testGaslessSignatureBoundToAmount() public {
+        bytes32 id = _card(50_000, uint64(block.timestamp + 1 days));
+        token.sign(alice, pay.authorizationNonce(id, 10_000, SALT)); // signed for 1 unit
+
+        vm.prank(carol);
+        vm.expectRevert("bad sig");
+        pay.chargeWithAuthorization(id, RID, 3, bytes32("r1"), _auth(SALT));
+    }
+
+    function testGaslessStillEnforcesCap() public {
+        bytes32 id = _card(20_000, uint64(block.timestamp + 1 days));
+        token.sign(alice, pay.authorizationNonce(id, 30_000, SALT));
+
+        vm.prank(carol);
+        vm.expectRevert(AevumPay.CapExceeded.selector);
+        pay.chargeWithAuthorization(id, RID, 3, bytes32("r1"), _auth(SALT));
     }
 }

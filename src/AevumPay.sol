@@ -9,8 +9,25 @@ pragma solidity ^0.8.24;
 ///         reconciled off-chain. Caps here are *business* limits on top of the
 ///         platform's ERC-4337 session keys, not a replacement for them.
 interface IERC20 {
+    function transfer(address to, uint256 amount) external returns (bool);
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
     function balanceOf(address account) external view returns (uint256);
+}
+
+/// @notice EIP-3009 (USDC-style) signed transfer. tUSD8 on Aevum implements this,
+///         so the payer never needs native gas: the agent submits the charge.
+interface IERC3009 {
+    function receiveWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
 }
 
 contract AevumPay {
@@ -28,6 +45,16 @@ contract AevumPay {
         uint256 spent;
         uint64 expiry;
         bool revoked;
+    }
+
+    /// @notice EIP-3009 signature envelope for a gasless charge.
+    struct Authorization {
+        uint256 validAfter;
+        uint256 validBefore;
+        uint256 salt;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
     }
 
     IERC20 public immutable token;
@@ -143,31 +170,82 @@ contract AevumPay {
     }
 
     /// @notice Charge `units` of a listed resource against a session card.
-    ///         Callable only by the card's spender (the agent).
+    ///         Callable only by the card's spender (the agent); payer must approve this contract.
     function charge(bytes32 cardId, bytes32 resourceId, uint256 units, bytes32 receiptHash)
         external
         nonReentrant
         returns (uint256 amount)
+    {
+        address payer;
+        address merchant;
+        (payer, merchant, amount) = _reserve(cardId, resourceId, units);
+        uint256 idx = ++receiptCount;
+
+        if (!token.transferFrom(payer, merchant, amount)) revert TransferFailed();
+
+        emit Charged(cardId, resourceId, payer, merchant, units, amount, receiptHash, idx);
+    }
+
+    // --------------------------------------------------- gasless (EIP-3009)
+
+    /// @notice Gasless charge: the payer signed an EIP-3009 authorization for this
+    ///         exact (card, amount, salt) tuple; the agent submits it and pays gas.
+    ///         The nonce binds the signature to the card and amount, so a relayer
+    ///         cannot replay it against another card, price or merchant.
+    function chargeWithAuthorization(
+        bytes32 cardId,
+        bytes32 resourceId,
+        uint256 units,
+        bytes32 receiptHash,
+        Authorization calldata auth
+    ) external nonReentrant returns (uint256 amount) {
+        address payer;
+        address merchant;
+        (payer, merchant, amount) = _reserve(cardId, resourceId, units);
+        uint256 idx = ++receiptCount;
+
+        IERC3009(address(token)).receiveWithAuthorization(
+            payer,
+            address(this),
+            amount,
+            auth.validAfter,
+            auth.validBefore,
+            authorizationNonce(cardId, amount, auth.salt),
+            auth.v,
+            auth.r,
+            auth.s
+        );
+        if (!token.transfer(merchant, amount)) revert TransferFailed();
+
+        emit Charged(cardId, resourceId, payer, merchant, units, amount, receiptHash, idx);
+    }
+
+    /// @notice Nonce the payer signs for a gasless charge; binds signature to card + amount.
+    function authorizationNonce(bytes32 cardId, uint256 amount, uint256 salt) public view returns (bytes32) {
+        return keccak256(abi.encode(address(this), cardId, amount, salt));
+    }
+
+    /// @dev Shared validation for both payment modes; debits the card and returns
+    ///      the parties so each caller can execute its own transfer mechanism.
+    function _reserve(bytes32 cardId, bytes32 resourceId, uint256 units)
+        internal
+        returns (address payer, address merchant, uint256 amount)
     {
         Card storage c = cards[cardId];
         if (c.revoked) revert CardRevokedErr();
         if (block.timestamp > c.expiry) revert CardExpired();
         if (msg.sender != c.spender) revert SpenderMismatch();
 
-        Resource storage r = resources[resourceId];
-        if (!r.active) revert ResourceNotActive();
-        if (r.merchant != c.merchant) revert MerchantMismatch();
+        Resource storage res = resources[resourceId];
+        if (!res.active) revert ResourceNotActive();
+        if (res.merchant != c.merchant) revert MerchantMismatch();
 
-        amount = r.unitPrice * units;
+        amount = res.unitPrice * units;
         if (amount == 0) revert ZeroAmount();
         if (c.spent + amount > c.cap) revert CapExceeded();
 
         c.spent += amount;
-        uint256 idx = ++receiptCount;
-
-        if (!token.transferFrom(c.payer, c.merchant, amount)) revert TransferFailed();
-
-        emit Charged(cardId, resourceId, c.payer, c.merchant, units, amount, receiptHash, idx);
+        return (c.payer, c.merchant, amount);
     }
 
     // ------------------------------------------------------------------- views
