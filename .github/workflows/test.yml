@@ -33,3 +33,13 @@ jobs:
 
       - name: Run Forge tests
         run: forge test -vvv
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install SDK deps
+        run: npm install --no-audit --no-fund
+
+      - name: Run SDK tests
+        run: node --test "sdk/test/*.test.js"

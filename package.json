@@ -1,0 +1,21 @@
+{
+  "name": "aevum-pay",
+  "version": "0.2.0",
+  "description": "AevumPay: metered agent payments with on-chain receipts on QDay Aevum testnet (chainId 44005, tUSD8)",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chichuzxy/aevum-pay.git"
+  },
+  "scripts": {
+    "demo": "bash demo/run.sh",
+    "demo:gasless": "node scripts/gasless-demo.mjs",
+    "test:sdk": "node --test \"sdk/test/*.test.js\"",
+    "test:contracts": "forge test"
+  },
+  "dependencies": {
+    "viem": "^2.57.20"
+  }
+}

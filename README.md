@@ -88,6 +88,41 @@ bash demo/run.sh
 Failing cases are forced on-chain with `--gas-limit`, so they leave status-0
 transactions as evidence instead of being rejected client-side.
 
+### Gasless proof (EIP-3009)
+
+```bash
+npm i viem
+node scripts/gasless-demo.mjs
+```
+
+The payer signs a `ReceiveWithAuthorization` offline; the agent broadcasts
+`chargeWithAuthorization` and pays the gas. The script asserts the local EIP-712
+domain against the token's `DOMAIN_SEPARATOR` and prints the before/after nonce and
+tQDAY balance of the payer:
+
+```
+payer tx count : 15 -> 15   (unchanged = payer sent nothing)
+payer tQDAY    : 5899143950988400544 -> 5899143950988400544   (unchanged = payer paid no gas)
+merchant tUSD8 : 0.09 -> 0.12
+tx 0x498ee239f52d2995cc02b1c04a8feb19b774e95c75af04739f8e124f9fd14b15 (block 3337951, gas 151,036)
+```
+
+## SDK — `@aevum-pay/sdk`
+
+`sdk/` is a dependency-light ESM package (viem as peer) so other builders can reuse
+the rail instead of re-deriving it:
+
+```js
+import { createAevumPay } from "@aevum-pay/sdk";
+const pay = createAevumPay();                       // 44005 defaults
+const { cardId } = await pay.openCard(payer, {...}); // approve + createCard
+const { amount, auth } = await pay.prepareGasless({ payerAccount: payer, cardId, resourceId, units: 3n, salt, validBefore });
+await pay.chargeWithAuthorization(agent, { cardId, resourceId, units: 3n, receiptHash, auth });
+const rows = await pay.receipts({ fromBlock: 3326369 }); // chunked for the 1,000-block log cap
+```
+
+`npm run test:sdk` covers cardId / nonce / domain-separator derivation (5 tests, no network).
+
 ## Deployed (QDay Aevum testnet, chain 44005)
 
 | | |
@@ -107,6 +142,7 @@ transactions as evidence instead of being rejected client-side.
 
 ## Status
 
-v2 deployed: session cards, metered charges (approve + EIP-3009 gasless), on-chain
-receipts; 10/10 Foundry tests. Next: agent-side 402 quote/challenge client,
-merchant dashboard reading `Charged` events, 2-3 min demo video.
+v2 deployed and demoed end-to-end: session cards, metered charges (approve + EIP-3009
+gasless), on-chain receipts, reusable SDK. 10/10 Foundry tests, 5/5 SDK tests, CI green.
+Next: merchant dashboard / minimal UI reading `Charged` events, 2-3 min demo video,
+submission pack.
