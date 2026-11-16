@@ -13,7 +13,10 @@
     "demo": "bash demo/run.sh",
     "demo:gasless": "node scripts/gasless-demo.mjs",
     "test:sdk": "node --test sdk/test/pure.test.js",
-    "test:contracts": "forge test"
+    "test:contracts": "forge test",
+    "demo:x402": "node demo/x402/setup.mjs && node demo/x402/merchant.mjs",
+    "demo:4337": "node scripts/4337-demo.mjs",
+    "smoke:web": "node scripts/web-smoke.mjs"
   },
   "dependencies": {
     "viem": "^2.57.20"

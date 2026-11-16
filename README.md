@@ -168,6 +168,31 @@ The inference is a deterministic stub (`aevum-stub-1`) — the payment rail is t
 and the response says so. The merchant will not serve a call without a matching `Charged`
 event for the right card, resource and price.
 
+## ERC-4337 session keys — the agent cannot move money
+
+```bash
+forge build && node scripts/4337-demo.mjs
+```
+
+A `SessionKeyAccount` (EntryPoint v0.7, deployed at
+`0x0000000071727De22E5E9d8BAf0edAc6f37da032` on 44005) owns the session card.
+The owner can do anything; the **session key can call exactly one selector on one
+target** (`AevumPay.charge`) until it expires.
+
+| step | evidence |
+| --- | --- |
+| deploy account | `0xfa36b0c170cb9bd020610350986d27e11b4c2fc1` (596,162 gas) |
+| owner: approve + createCard + setSessionKey | txs `0xc08795d5…`, `0x88b252eb…`, `0x0d15e5c2…` |
+| **userOp pays one API call** | tx `0xbda27b640a523a2d419de93076bc3e068de7d1ed11177639ab20f3209092fcf3` — status 1, 210,899 gas, merchant 0.19 → 0.20 tUSD8, card 0.05 → 0.04 |
+| same session key tries `token.transfer` | tx `0xeecda1415d1736e267d9a1e87c60c827327774d46245c8b72104f56bf96c1826` — **status 0, rejected during validation** |
+
+The payer's key never sent the payment; the agent relayed the userOp and paid the gas.
+
+**Gotcha worth knowing:** in ERC-4337 **v0.7 `PackedUserOperation.nonce` is `uint256`** (v0.6 used
+`bytes32`). With the wrong type the account's `validateUserOp` selector becomes `0xaa45b2dc`
+instead of the canonical `0x19822f7c`, and the EntryPoint reverts with `AA23 reverted` — the account
+is never entered, so the error looks like a signature problem but is really ABI drift.
+
 ## Deployed (QDay Aevum testnet, chain 44005)
 
 | | |
