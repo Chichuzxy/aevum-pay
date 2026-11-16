@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AevumPay — metered agent payments</title>
+    <meta name="description" content="Session cards, metered tUSD8 charges and gasless EIP-3009 settlement on QDay Aevum testnet." />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "viem": "https://esm.sh/viem@2.57.20",
+          "viem/accounts": "https://esm.sh/viem@2.57.20/accounts"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="wrap topbar-inner">
+        <a class="brand" href="#cards">
+          <span class="brand-mark">A</span>
+          <span class="brand-name">AevumPay</span>
+          <span class="brand-sub">metered agent payments</span>
+        </a>
+        <div class="topbar-right">
+          <span class="chip" id="net-pill">QDay Aevum · 44005</span>
+          <button class="btn btn-ghost" id="connect-btn">Connect wallet</button>
+        </div>
+      </div>
+      <nav class="tabs wrap" id="tabs">
+        <a href="#open" data-view="open">Open a card</a>
+        <a href="#cards" data-view="cards">Cards</a>
+        <a href="#pay" data-view="pay">Pay</a>
+        <a href="#merchant" data-view="merchant">Merchant</a>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <!-- ─────────────────────────────── 1. open a card -->
+      <section id="view-open" class="view">
+        <div class="view-head">
+          <h1>Give an agent a budget</h1>
+          <p class="lede">
+            Pick a priced resource, set a spend cap and an expiry. The card is bound to one merchant —
+            your agent can charge it, and you can revoke it at any time.
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <form class="card form" id="open-form">
+            <label>
+              <span>Resource</span>
+              <input id="open-resource" value="api.infer.small" autocomplete="off" />
+              <small>Hashed into a resourceId. Try <code>api.infer.small</code>.</small>
+            </label>
+
+            <div class="quote" id="open-quote">Enter a resource to load its price.</div>
+
+            <label>
+              <span>Agent address (the spender)</span>
+              <input id="open-spender" placeholder="0x… defaults to your wallet" autocomplete="off" />
+              <small>The key that may charge this card. Leave empty to use your own wallet (single-key demo).</small>
+            </label>
+
+            <label>
+              <span>Spend cap (tUSD8)</span>
+              <input id="open-cap" value="0.05" inputmode="decimal" />
+              <small>Maximum the agent can ever pull from this card.</small>
+            </label>
+
+            <label>
+              <span>Valid for</span>
+              <select id="open-expiry">
+                <option value="3600">1 hour</option>
+                <option value="86400" selected>1 day</option>
+                <option value="604800">7 days</option>
+              </select>
+            </label>
+
+            <button class="btn btn-primary" id="open-submit" type="submit">Approve &amp; open card</button>
+            <p class="hint" id="open-hint"></p>
+          </form>
+
+          <aside class="card side">
+            <h2>What happens on-chain</h2>
+            <ol class="steps">
+              <li><b>approve</b> — the token lets the AevumPay contract move up to your cap.</li>
+              <li><b>createCard</b> — the card records spender, merchant, cap and expiry.</li>
+              <li><b>charge</b> — the agent pays per unit; the cap and expiry are enforced by the contract.</li>
+            </ol>
+            <div class="kv"><span>Contract</span><a id="side-contract" target="_blank" rel="noreferrer"></a></div>
+            <div class="kv"><span>Token</span><a id="side-token" target="_blank" rel="noreferrer"></a></div>
+            <p class="fine">Caps here are business limits on top of the platform's ERC-4337 session keys.</p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ─────────────────────────────── 2. cards -->
+      <section id="view-cards" class="view">
+        <div class="view-head">
+          <h1>Your cards</h1>
+          <p class="lede">Every card is a budget with an expiry. Revoke one and the agent stops paying instantly.</p>
+        </div>
+
+        <div class="card" id="cards-empty">
+          <p>No card yet. <a href="#open">Open your first card</a> — it takes one wallet signature.</p>
+        </div>
+
+        <div id="card-list" class="card-list"></div>
+        <div id="card-detail"></div>
+      </section>
+
+      <!-- ─────────────────────────────── 3. pay (agent view) -->
+      <section id="view-pay" class="view">
+        <div class="view-head">
+          <h1>Agent pays per unit</h1>
+          <p class="lede">
+            The agent quotes the resource, the payer signs an EIP-3009 authorization off-chain, and the
+            agent submits it. The payer sends no transaction and pays no gas.
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <div class="card form">
+            <label>
+              <span>Card</span>
+              <select id="pay-card"></select>
+            </label>
+            <label>
+              <span>Units</span>
+              <input id="pay-units" value="3" inputmode="numeric" />
+              <small id="pay-price">—</small>
+            </label>
+
+            <button class="btn btn-primary" id="pay-sign">1 · Ask payer to sign (no gas)</button>
+            <div class="signature-box" id="pay-sig">Nothing signed yet.</div>
+
+            <hr />
+
+            <label>
+              <span>Agent key (submits and pays gas)</span>
+              <input id="pay-agent-key" type="password" placeholder="0x… (kept in memory only)" autocomplete="off" />
+              <small>Demo only: a throwaway key. Never paste a key that holds value.</small>
+            </label>
+            <button class="btn btn-primary" id="pay-submit" disabled>2 · Submit charge</button>
+            <p class="hint" id="pay-hint"></p>
+          </div>
+
+          <aside class="card side">
+            <h2>Why the payer pays nothing</h2>
+            <p>
+              tUSD8 implements <code>receiveWithAuthorization</code> (EIP-3009). Your signature authorises one
+              exact transfer; the contract only forwards it if the card still has room.
+            </p>
+            <div class="kv"><span>Signature binds</span><b>card + amount</b></div>
+            <div class="kv"><span>Replay</span><b>rejected by the token nonce</b></div>
+            <div class="kv"><span>Who pays gas</span><b>the agent</b></div>
+            <p class="fine">A signature can’t be replayed onto another card, price or merchant.</p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ─────────────────────────────── 4. merchant -->
+      <section id="view-merchant" class="view">
+        <div class="view-head">
+          <h1>Merchant view</h1>
+          <p class="lede">Straight from the chain: totals, per-resource revenue and every receipt, exportable as CSV.</p>
+        </div>
+
+        <div class="stats" id="merchant-stats">
+          <div class="stat card"><span>Receipts</span><b id="stat-count">—</b></div>
+          <div class="stat card"><span>Settled (tUSD8)</span><b id="stat-total">—</b></div>
+          <div class="stat card"><span>Cards used</span><b id="stat-cards">—</b></div>
+          <div class="stat card"><span>Resources</span><b id="stat-resources">—</b></div>
+        </div>
+
+        <div class="card">
+          <div class="table-head">
+            <h2>Receipts</h2>
+            <div class="table-actions">
+              <button class="btn btn-ghost" id="refresh-btn">Refresh</button>
+              <button class="btn btn-ghost" id="csv-btn">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="receipt-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th class="col-time">Time</th>
+                  <th>Resource</th>
+                  <th class="num">Units</th>
+                  <th class="num">Amount</th>
+                  <th>Tx</th>
+                </tr>
+              </thead>
+              <tbody id="receipt-rows">
+                <tr><td colspan="6" class="empty">Loading receipts…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="fine" id="receipt-note"></p>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <footer class="footer wrap">
+      <span>Aevum Builder Challenge #1 · track: Decentralized Payments</span>
+      <span><a href="https://github.com/Chichuzxy/aevum-pay" target="_blank" rel="noreferrer">GitHub</a> · <a href="https://explorer-test.qday.info" target="_blank" rel="noreferrer">Explorer</a></span>
+    </footer>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

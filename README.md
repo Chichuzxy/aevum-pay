@@ -107,6 +107,25 @@ merchant tUSD8 : 0.09 -> 0.12
 tx 0x498ee239f52d2995cc02b1c04a8feb19b774e95c75af04739f8e124f9fd14b15 (block 3337951, gas 151,036)
 ```
 
+## Web UI (no build step)
+
+```bash
+python -m http.server 8123        # from the repo root
+# open http://localhost:8123/web/
+```
+
+A single-page app (viem from a CDN, the rest is our SDK) with four screens:
+**Open a card** (resource quote → cap → expiry → approve+createCard),
+**Cards** (remaining budget, expiry, receipts, one-click revoke),
+**Pay** (agent quotes, payer signs EIP-712 in the wallet — no gas — then the agent
+submits), **Merchant** (totals, per-resource revenue, receipts, CSV export).
+
+![Merchant dashboard](web/screenshots/merchant-desktop.png)
+![Mobile](web/screenshots/merchant-mobile.png)
+
+Every number comes from the chain (`cards()`, `Charged` events read in 1,000-block
+chunks) — no database, no backend.
+
 ## SDK — `@aevum-pay/sdk`
 
 `sdk/` is a dependency-light ESM package (viem as peer) so other builders can reuse
