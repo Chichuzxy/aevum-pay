@@ -67,6 +67,27 @@ forge script script/Deploy.s.sol:Deploy --rpc-url qday --broadcast
 Deployment address and tx hash are recorded in the project's on-chain log
 (`02_链上记录`) outside this repo, and in `broadcast/Deploy.s.sol/44005/`.
 
+## Demo (one card, real transactions)
+
+```bash
+cp .env.example .env   # payer key, filled by you
+# .env.demo holds a throwaway agent key (gitignored)
+bash demo/run.sh
+```
+
+`demo/run.sh` funds the agent with 0.05 tQDAY, registers it as a merchant, lists
+`api.infer.small` at 0.01 tUSD8/unit, opens a 0.05-cap 1-day card, then:
+
+| step | result |
+| --- | --- |
+| charge 3 units (0.03) | status 1 — merchant paid, `Charged` receipt #2 |
+| charge 4 units (0.04) | status 0 — revert `CapExceeded` (0xa4875a49) at block 3326803 |
+| payer `revokeCard` | status 1 — block 3326811 |
+| charge 1 unit after revoke | status 0 — revert `CardRevokedErr` (0x9c051178) at block 3326819 |
+
+Failing cases are forced on-chain with `--gas-limit`, so they leave status-0
+transactions as evidence instead of being rejected client-side.
+
 ## Deployed (QDay Aevum testnet, chain 44005)
 
 | | |
