@@ -141,6 +141,34 @@ async function ensureChain() {
 const write = (address, abi, functionName, args) =>
   state.wallet.writeContract({ address, abi, functionName, args, chain: CHAIN, account: state.address });
 
+// If the x402 demo config is served next to /web/ (local preview), adopt its card,
+// so the terminal demo and the browser are looking at the same card. On GitHub Pages
+// this fetch 404s and is ignored.
+async function adoptLocalDemoCard() {
+  try {
+    const res = await fetch("../demo/x402/config.json", { cache: "no-store" });
+    if (!res.ok) return;
+    const cfg = await res.json();
+    if (!cfg?.cardId) return;
+    if (state.cards.some((c) => c.cardId.toLowerCase() === cfg.cardId.toLowerCase())) return;
+    state.cards = [
+      {
+        cardId: cfg.cardId,
+        resourceId: cfg.resourceId,
+        resource: cfg.resource,
+        merchant: cfg.merchant,
+        createdAt: Date.now(),
+        demo: true,
+      },
+      ...state.cards,
+    ];
+    localStorage.setItem("aevumpay.cards", JSON.stringify(state.cards));
+    if ((location.hash.replace("#", "").split("/")[0] || "cards") === "cards") renderCards();
+  } catch {
+    /* no local demo config: fine */
+  }
+}
+
 // ── view routing ────────────────────────────────────────────────────────────
 const views = ["open", "cards", "pay", "merchant"];
 function route() {
@@ -266,7 +294,7 @@ async function renderCards() {
       <div class="card-row ${state.activeCard?.cardId === entry.cardId ? "selected" : ""}" data-card="${entry.cardId}">
         <div>
           <div class="mono">${short(entry.cardId, 10)}</div>
-          <div class="muted">${entry.resource ?? "resource"} · expires ${new Date(Number(card.expiry) * 1000).toLocaleString()}</div>
+          <div class="muted">${entry.resource ?? "resource"}${entry.demo ? " · terminal demo card" : ""} · expires ${new Date(Number(card.expiry) * 1000).toLocaleString()}</div>
         </div>
         <div style="text-align:right">
           <div class="mono">${fmtShort(card.remaining)} / ${fmtShort(card.cap)} tUSD8</div>
@@ -559,3 +587,4 @@ if (window.ethereum?.request) {
 
 route();
 loadQuote();
+adoptLocalDemoCard();

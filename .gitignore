@@ -24,3 +24,7 @@ node_modules/
 
 demo/x402/config.json
 evidence/*.jsonl
+
+tools/ffmpeg*
+video/raw/
+video/out/
