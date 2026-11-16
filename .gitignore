@@ -21,3 +21,6 @@ docs/
 
 # node
 node_modules/
+
+demo/x402/config.json
+evidence/*.jsonl

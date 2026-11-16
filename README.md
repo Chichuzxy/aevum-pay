@@ -144,6 +144,30 @@ const rows = await pay.receipts({ fromBlock: 3326369 }); // chunked for the 1,00
 
 `npm run test:sdk` covers cardId / nonce / domain-separator derivation (5 tests, no network).
 
+## x402 loop — an API that costs tUSD8 per call
+
+```bash
+node demo/x402/setup.mjs      # three roles: payer / agent (spender) / merchant; opens a 0.05 tUSD8 card
+node demo/x402/merchant.mjs   # terminal 1 — HTTP API with a 402 challenge
+node demo/x402/agent.mjs      # terminal 2 — the agent pays and retries
+```
+
+Measured on QDay Aevum testnet (every row is a real tx, see `evidence/x402-*.jsonl`):
+
+| what | value |
+| --- | --- |
+| paid calls in one run | 5 (each 0.01 tUSD8, card cap 0.05) |
+| settlement gas | 108,032 gas for the first charge, 88,666–90,932 after that |
+| cost per call | ≈1.08e-4 tQDAY at 1.125 gwei → **≈9,200 metered API calls per 1 tQDAY** |
+| block interval | 1,000 ms (from block timestamps) |
+| merchant verification | 171–190 ms (`getTransactionReceipt` + `Charged` decode) |
+| over-budget attempt | rejected **on-chain**, tx `0x139e701c…68bd51` status 0, `CapExceeded` |
+| forged receipt | `HTTP 402 tx_not_found` |
+
+The inference is a deterministic stub (`aevum-stub-1`) — the payment rail is the real part,
+and the response says so. The merchant will not serve a call without a matching `Charged`
+event for the right card, resource and price.
+
 ## Deployed (QDay Aevum testnet, chain 44005)
 
 | | |
