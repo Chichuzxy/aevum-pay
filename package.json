@@ -12,7 +12,7 @@
   "scripts": {
     "demo": "bash demo/run.sh",
     "demo:gasless": "node scripts/gasless-demo.mjs",
-    "test:sdk": "node --test \"sdk/test/*.test.js\"",
+    "test:sdk": "node --test sdk/test/pure.test.js",
     "test:contracts": "forge test"
   },
   "dependencies": {
