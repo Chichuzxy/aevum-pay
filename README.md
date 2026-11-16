@@ -185,6 +185,7 @@ demo/x402/                    merchant API with a 402 challenge + paying agent
 scripts/gasless-demo.mjs      EIP-3009 gasless proof
 scripts/4337-demo.mjs         session key userOp + a rejected misuse
 docs/BUSINESS.md              unit economics, buyers, honest limits
+docs/PRACTICE.md              runbook for rehearsing the demo before recording
 evidence/                     machine-written JSONL from the demo runs
 ```
 
