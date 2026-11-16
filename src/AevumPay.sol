@@ -204,17 +204,18 @@ contract AevumPay {
         (payer, merchant, amount) = _reserve(cardId, resourceId, units);
         uint256 idx = ++receiptCount;
 
-        IERC3009(address(token)).receiveWithAuthorization(
-            payer,
-            address(this),
-            amount,
-            auth.validAfter,
-            auth.validBefore,
-            authorizationNonce(cardId, amount, auth.salt),
-            auth.v,
-            auth.r,
-            auth.s
-        );
+        IERC3009(address(token))
+            .receiveWithAuthorization(
+                payer,
+                address(this),
+                amount,
+                auth.validAfter,
+                auth.validBefore,
+                authorizationNonce(cardId, amount, auth.salt),
+                auth.v,
+                auth.r,
+                auth.s
+            );
         if (!token.transfer(merchant, amount)) revert TransferFailed();
 
         emit Charged(cardId, resourceId, payer, merchant, units, amount, receiptHash, idx);

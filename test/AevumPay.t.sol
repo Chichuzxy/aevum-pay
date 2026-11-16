@@ -166,12 +166,7 @@ contract AevumPayTest is Test {
 
     function _auth(uint256 salt) internal view returns (AevumPay.Authorization memory) {
         return AevumPay.Authorization({
-            validAfter: 0,
-            validBefore: block.timestamp + 1 hours,
-            salt: salt,
-            v: 27,
-            r: bytes32(0),
-            s: bytes32(0)
+            validAfter: 0, validBefore: block.timestamp + 1 hours, salt: salt, v: 27, r: bytes32(0), s: bytes32(0)
         });
     }
 
