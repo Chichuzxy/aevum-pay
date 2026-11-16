@@ -109,8 +109,10 @@ tx 0x498ee239f52d2995cc02b1c04a8feb19b774e95c75af04739f8e124f9fd14b15 (block 333
 
 ## Web UI (no build step)
 
+**Live: https://chichuzxy.github.io/aevum-pay/** (GitHub Pages, free for public repos)
+
 ```bash
-python -m http.server 8123        # from the repo root
+python -m http.server 8123        # local preview, from the repo root
 # open http://localhost:8123/web/
 ```
 
