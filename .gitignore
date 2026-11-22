@@ -11,8 +11,7 @@ out/
 /broadcast/*/31337/
 /broadcast/**/dry-run/
 
-# Docs
-docs/
+# Docs (our judge-facing docs are tracked; forge init ignored this, we do not)
 
 # Dotenv file
 .env
