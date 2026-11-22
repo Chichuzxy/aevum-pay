@@ -1,7 +1,7 @@
 {
-  "name": "@aevum-pay/sdk",
-  "version": "0.1.0",
-  "description": "AevumPay client: session cards, metered tUSD8 charges and gasless EIP-3009 settlement on QDay Aevum testnet (chainId 44005).",
+  "name": "aevum-pay-sdk",
+  "version": "0.2.0",
+  "description": "AevumPay client for QDay Aevum testnet: session cards, metered tUSD8 charges, EIP-3009 gasless settlement, refunds and chunked receipt reads.",
   "license": "MIT",
   "type": "module",
   "main": "./src/index.js",
@@ -9,12 +9,31 @@
     ".": "./src/index.js",
     "./abi": "./src/abi.js"
   },
-  "files": ["src", "README.md"],
-  "keywords": ["qday", "aevum", "tusd8", "eip-3009", "payments", "agents", "viem"],
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "keywords": [
+    "qday",
+    "aevum",
+    "tusd8",
+    "eip-3009",
+    "payments",
+    "agents",
+    "viem"
+  ],
   "peerDependencies": {
     "viem": "^2.0.0"
   },
   "engines": {
     "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chichuzxy/aevum-pay.git",
+    "directory": "sdk"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

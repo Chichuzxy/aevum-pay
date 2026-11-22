@@ -4,9 +4,11 @@ Client helpers for **AevumPay** on QDay Aevum testnet (chainId `44005`, tUSD8).
 Use it to give an agent a budget, let it pay per unit, and reconcile what was spent.
 
 ```bash
-npm i viem
-npm i aevum-pay-sdk        # once published; for now: import from ./sdk/src
+npm i viem aevum-pay-sdk
 ```
+
+> Publishing: `npm login` then `bash scripts/publish-sdk.sh` (add `--dry` to only validate).
+> Until then the package is importable straight from this repo: `import { createAevumPay } from "./sdk/src/index.js"`.
 
 ## What it gives you
 
@@ -19,6 +21,8 @@ npm i aevum-pay-sdk        # once published; for now: import from ./sdk/src
 | `pay.chargeWithAuthorization(wallet, {...})` | agent broadcasts the payer's signature and pays gas |
 | `pay.charge(wallet, {...})` | classic approve + `transferFrom` path |
 | `pay.revokeCard(wallet, cardId)` | payer cuts the card off immediately |
+| `pay.refund(wallet, cardId, amount, reason)` | merchant returns tUSD8 and re-opens the card's budget |
+| `pay.openAnyMerchantCard(wallet, {...})` | a card any listed merchant may charge |
 | `pay.receipts({ fromBlock, cardId })` | `Charged` receipts, walking `eth_getLogs` in 1,000-block chunks |
 | `pay.card(cardId)` / `pay.remaining(cardId)` | cap, spent, expiry, revoked |
 
