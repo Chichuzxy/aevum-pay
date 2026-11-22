@@ -131,11 +131,17 @@ for (let i = 1; i <= maxCalls; i += 1) {
 }
 
 // The card is empty now: the agent tries anyway. The contract must refuse, on-chain.
+const remainingBefore = await pay.remaining(config.cardId);
 console.log("over-budget attempt — the chain must refuse, so the merchant never sells for free");
 try {
   await paidCall("one call past the budget");
-  console.log("  UNEXPECTED: the charge went through past the cap");
-  record({ kind: "over_cap", unexpected: true });
+  if (remainingBefore < price) {
+    console.log("  UNEXPECTED: the charge went through past the cap");
+    record({ kind: "over_cap", unexpected: true });
+  } else {
+    console.log(`  budget still had ${formatUnits(remainingBefore, 6)} tUSD8, so this settled normally (re-run to exhaust the card)`);
+    record({ kind: "still_within_budget", remaining: remainingBefore.toString() });
+  }
 } catch (error) {
   // The receipt only says "reverted"; replay it as a call to recover the revert reason.
   let reason = error.shortMessage ?? error.message;
