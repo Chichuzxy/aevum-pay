@@ -58,7 +58,7 @@ export function createAevumPay(opts = {}) {
     card: (cardId) =>
       publicClient
         .readContract({ address: contract, abi: AEVUMPAY_ABI, functionName: "cards", args: [cardId] })
-        .then(([payer, merchant, spender, cap, spent, expiry, revoked]) => ({
+        .then(([payer, merchant, spender, cap, spent, expiry, revoked, anyMerchant]) => ({
           payer,
           merchant,
           spender,
@@ -66,6 +66,7 @@ export function createAevumPay(opts = {}) {
           spent,
           expiry,
           revoked,
+          anyMerchant,
           remaining: cap - spent,
         })),
 
@@ -122,6 +123,22 @@ export function createAevumPay(opts = {}) {
     listResource: (wallet, resourceId, unitPrice) =>
       send(wallet, contract, AEVUMPAY_ABI, "listResource", [resourceId, BigInt(unitPrice)]),
     revokeCard: (wallet, cardId) => send(wallet, contract, AEVUMPAY_ABI, "revokeCard", [cardId]),
+
+    /** Merchant returns tUSD8 to the payer; the card's budget re-opens. Requires an approve first. */
+    refund: (wallet, cardId, amount, reason = "0x" + "00".repeat(32)) =>
+      send(wallet, contract, AEVUMPAY_ABI, "refund", [cardId, BigInt(amount), reason]),
+
+    /** A card any listed merchant may charge, still capped and time-boxed. */
+    async openAnyMerchantCard(wallet, { spender, cap, expiry, salt }) {
+      const approveReceipt = await send(wallet, token, ERC20_MIN_ABI, "approve", [contract, BigInt(cap)]);
+      const createReceipt = await send(wallet, contract, AEVUMPAY_ABI, "createAnyMerchantCard", [
+        spender,
+        BigInt(cap),
+        BigInt(expiry),
+        BigInt(salt),
+      ]);
+      return { cardId: computeCardId({ payer: wallet.address, spender, merchant: "0x0000000000000000000000000000000000000000", cap, expiry, salt }), approve: approveReceipt, createCard: createReceipt };
+    },
 
     /**
      * Payer opens a metered card: approve the contract, then createCard.

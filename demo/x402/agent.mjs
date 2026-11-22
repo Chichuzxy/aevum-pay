@@ -100,11 +100,11 @@ async function paidCall(prompt) {
     block: String(rc.blockNumber),
     receiptIndex: body.payment.receiptIndex,
     ms: { challenge: quotedAt - started, settleWall: minedAt - sentAt, blockMs, verify: doneAt - verifyAt, total: doneAt - started },
-    result: body.result.tokens.slice(0, 3).map((t) => t.token),
+    result: { model: body.result.model, source: body.result.source, text: (body.result.text ?? "").slice(0, 160) },
   };
   record({ kind: "paid_call", ...row });
   console.log(`  200  receipt #${row.receiptIndex} · verify ${row.ms.verify}ms · total ${row.ms.total}ms`);
-  console.log(`       ${row.result.join(", ")}`);
+  console.log(`       [${row.result.model} / ${row.result.source}] ${row.result.text.replace(/\s+/g, " ").slice(0, 120)}`);
   return row;
 }
 

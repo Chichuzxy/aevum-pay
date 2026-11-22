@@ -45,6 +45,7 @@ contract AevumPay {
         uint256 spent;
         uint64 expiry;
         bool revoked;
+        bool anyMerchant;
     }
 
     /// @notice EIP-3009 signature envelope for a gasless charge.
@@ -90,6 +91,9 @@ contract AevumPay {
         uint256 receiptIndex
     );
     event CardRevoked(bytes32 indexed cardId, address indexed by);
+    event Refunded(
+        bytes32 indexed cardId, address indexed merchant, address indexed payer, uint256 amount, bytes32 reason
+    );
 
     error NotMerchant();
     error ResourceNotActive();
@@ -103,6 +107,7 @@ contract AevumPay {
     error CapExceeded();
     error TransferFailed();
     error Reentrant();
+    error RefundTooLarge();
 
     modifier nonReentrant() {
         if (_locked) revert Reentrant();
@@ -160,6 +165,34 @@ contract AevumPay {
         c.cap = cap;
         c.expiry = expiry;
         emit CardCreated(cardId, msg.sender, merchant, spender, cap, expiry);
+    }
+
+    /// @notice Open a card that any listed merchant may charge (still capped and time-boxed).
+    function createAnyMerchantCard(address spender, uint256 cap, uint64 expiry, uint256 salt)
+        external
+        returns (bytes32 cardId)
+    {
+        if (cap == 0) revert ZeroAmount();
+        cardId = keccak256(abi.encode(msg.sender, spender, address(0), cap, expiry, salt));
+        Card storage c = cards[cardId];
+        c.payer = msg.sender;
+        c.merchant = address(0);
+        c.spender = spender;
+        c.cap = cap;
+        c.expiry = expiry;
+        c.anyMerchant = true;
+        emit CardCreated(cardId, msg.sender, address(0), spender, cap, expiry);
+    }
+
+    /// @notice Merchant sends tUSD8 back to the payer and re-opens that much budget on the card.
+    /// @dev Funds come from the caller (must approve this contract); `spent` is reduced, capped at zero.
+    function refund(bytes32 cardId, uint256 amount, bytes32 reason) external nonReentrant {
+        Card storage c = cards[cardId];
+        if (amount == 0) revert ZeroAmount();
+        if (amount > c.spent) revert RefundTooLarge();
+        c.spent -= amount;
+        if (!token.transferFrom(msg.sender, c.payer, amount)) revert TransferFailed();
+        emit Refunded(cardId, msg.sender, c.payer, amount, reason);
     }
 
     function revokeCard(bytes32 cardId) external {
@@ -239,14 +272,15 @@ contract AevumPay {
 
         Resource storage res = resources[resourceId];
         if (!res.active) revert ResourceNotActive();
-        if (res.merchant != c.merchant) revert MerchantMismatch();
+        address payee = c.anyMerchant ? res.merchant : c.merchant;
+        if (!c.anyMerchant && res.merchant != c.merchant) revert MerchantMismatch();
 
         amount = res.unitPrice * units;
         if (amount == 0) revert ZeroAmount();
         if (c.spent + amount > c.cap) revert CapExceeded();
 
         c.spent += amount;
-        return (c.payer, c.merchant, amount);
+        return (c.payer, payee, amount);
     }
 
     // ------------------------------------------------------------------- views

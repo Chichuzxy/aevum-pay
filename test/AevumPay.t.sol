@@ -217,4 +217,79 @@ contract AevumPayTest is Test {
         vm.expectRevert(AevumPay.CapExceeded.selector);
         pay.chargeWithAuthorization(id, RID, 3, bytes32("r1"), _auth(SALT));
     }
+
+    // ------------------------------------------- v3: wildcard cards + refunds
+
+    function testAnyMerchantCardPaysAnyListedMerchant() public {
+        address mallory = address(0xBAD);
+        vm.prank(mallory);
+        pay.registerMerchant();
+        vm.prank(mallory);
+        pay.listResource(RID_OTHER, 2_000);
+
+        vm.prank(alice);
+        bytes32 id = pay.createAnyMerchantCard(carol, 100_000, uint64(block.timestamp + 1 days), 9);
+
+        vm.prank(carol);
+        pay.charge(id, RID, 3, bytes32("r1")); // original merchant, 30_000
+        vm.prank(carol);
+        pay.charge(id, RID_OTHER, 5, bytes32("r2")); // the other merchant, 10_000
+
+        assertEq(token.balanceOf(bob), 30_000);
+        assertEq(token.balanceOf(mallory), 10_000);
+        assertEq(pay.remaining(id), 60_000);
+    }
+
+    function testSingleMerchantCardStillRejectsOtherMerchant() public {
+        address mallory = address(0xBAD);
+        vm.prank(mallory);
+        pay.registerMerchant();
+        vm.prank(mallory);
+        pay.listResource(RID_OTHER, 1);
+
+        bytes32 id = _card(50_000, uint64(block.timestamp + 1 days));
+        vm.prank(carol);
+        vm.expectRevert(AevumPay.MerchantMismatch.selector);
+        pay.charge(id, RID_OTHER, 1, bytes32("r1"));
+    }
+
+    function testRefundReopensBudgetAndPaysPayerBack() public {
+        bytes32 id = _card(50_000, uint64(block.timestamp + 1 days));
+        vm.prank(carol);
+        pay.charge(id, RID, 3, bytes32("r1")); // bob +30_000, alice -30_000
+        assertEq(pay.remaining(id), 20_000);
+
+        vm.prank(bob);
+        token.approve(address(pay), type(uint256).max);
+        vm.prank(bob);
+        pay.refund(id, 30_000, keccak256("duplicate charge"));
+
+        assertEq(token.balanceOf(alice), 1_000_000, "payer made whole");
+        assertEq(token.balanceOf(bob), 0, "merchant refunded");
+        assertEq(pay.remaining(id), 50_000, "budget restored");
+    }
+
+    function testRefundCannotExceedSpent() public {
+        bytes32 id = _card(50_000, uint64(block.timestamp + 1 days));
+        vm.prank(carol);
+        pay.charge(id, RID, 1, bytes32("r1"));
+
+        vm.prank(bob);
+        token.approve(address(pay), type(uint256).max);
+        vm.prank(bob);
+        vm.expectRevert(AevumPay.RefundTooLarge.selector);
+        pay.refund(id, 20_000, bytes32("too much"));
+    }
+
+    function testRefundRequiresCallerFunds() public {
+        bytes32 id = _card(50_000, uint64(block.timestamp + 1 days));
+        vm.prank(carol);
+        pay.charge(id, RID, 1, bytes32("r1"));
+
+        // nobody approved the contract on behalf of a stranger, so the token pull fails
+        // (the mock reverts with "balance"; a real ERC-20 would revert or return false)
+        vm.prank(address(0xDEAD));
+        vm.expectRevert(bytes("balance"));
+        pay.refund(id, 1_000, bytes32("x"));
+    }
 }

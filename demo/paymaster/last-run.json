@@ -1,0 +1,10 @@
+{
+  "account": "0x61730c9efbee6bd8d367b86e20c3dc501e579eff",
+  "cardId": "0xad9c0d97e4054a159161efa86ac35e49fbb94e3f12c8b8286f29fa02ddd854ac",
+  "paymaster": "0x46d55a6bfe33367700dc016f15fa3513090c711a",
+  "depositBefore": "0.02",
+  "depositAfter": "0.019612100997284707",
+  "sponsoredTx": "0x492132262a40bcbab9c0b183fb9fcdc6e8823f85b0d3ac01d2ace74d3f9ea1c3",
+  "refusedTx": "0x2d638ebddf854c79752aa1c2998ae16f85f183252eba6eae1631ed3e6ed6f1ba",
+  "at": "2026-11-22T16:39:08.547Z"
+}

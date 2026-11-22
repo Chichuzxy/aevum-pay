@@ -50,7 +50,27 @@ export const AEVUMPAY_ABI = [
       { name: "spent", type: "uint256" },
       { name: "expiry", type: "uint64" },
       { name: "revoked", type: "bool" },
+      { name: "anyMerchant", type: "bool" },
     ],
+  },
+  {
+    name: "createAnyMerchantCard",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "cap", type: "uint256" },
+      { name: "expiry", type: "uint64" },
+      { name: "salt", type: "uint256" },
+    ],
+    outputs: [{ type: "bytes32", name: "cardId" }],
+  },
+  {
+    name: "refund",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "cardId", type: "bytes32" }, { name: "amount", type: "uint256" }, { name: "reason", type: "bytes32" }],
+    outputs: [],
   },
   { name: "revokeCard", type: "function", stateMutability: "nonpayable", inputs: [{ name: "cardId", type: "bytes32" }], outputs: [] },
   {
@@ -142,6 +162,17 @@ export const AEVUMPAY_ABI = [
       { name: "amount", type: "uint256", indexed: false },
       { name: "receiptHash", type: "bytes32", indexed: false },
       { name: "receiptIndex", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "Refunded",
+    type: "event",
+    inputs: [
+      { name: "cardId", type: "bytes32", indexed: true },
+      { name: "merchant", type: "address", indexed: true },
+      { name: "payer", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "reason", type: "bytes32", indexed: false },
     ],
   },
   {

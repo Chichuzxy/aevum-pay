@@ -1,0 +1,9 @@
+{
+  "paymaster": "0x46d55a6bfe33367700dc016f15fa3513090c711a",
+  "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+  "signer": "0x87c104C83f061489a8bbd9FC9bEcadE58E52685F",
+  "owner": "0xdb03374034ca16Afe997038266886327d1efd3af",
+  "aevumPay": "0x5378f4bb7996d237edc21a48e426505254b00149",
+  "depositTQDAY": "0.02",
+  "createdAt": "2026-11-22T16:36:30.429Z"
+}

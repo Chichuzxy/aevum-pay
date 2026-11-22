@@ -4,7 +4,8 @@ export const RPC_URL = "https://rpc-test.qday.info";
 export const EXPLORER = "https://explorer-test.qday.info";
 
 export const TUSD8 = "0x456569838f1d43009A91ebA4263147Afd7233483"; // 6 decimals, EIP-3009 enabled
-export const AEVUMPAY = "0x6728d94b8e24960556f5a731761974a1774c3abe"; // v2, gasless capable
+export const AEVUMPAY = "0x5378f4bb7996d237edc21a48e426505254b00149"; // v3: + wildcard cards, refunds
+export const AEVUMPAY_V2 = "0x6728d94b8e24960556f5a731761974a1774c3abe"; // superseded, kept for reference
 
 // tUSD8 EIP-712 domain. Verified against the token's DOMAIN_SEPARATOR on 44005.
 export const TUSD8_DOMAIN = { name: "tUSD8", version: "2" };

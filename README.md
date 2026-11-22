@@ -1,7 +1,7 @@
 # AevumPay — metered agent payments with on-chain receipts
 
 QDay Aevum testnet (chainId 44005, tUSD8) · Aevum Builder Challenge #1 · track: **Decentralized Payments**
-Live app: **https://chichuzxy.github.io/aevum-pay/** · Contract: `0x6728d94b8e24960556f5a731761974a1774c3abe`
+Live app: **https://chichuzxy.github.io/aevum-pay/** · Contract: `0x5378f4bb7996d237edc21a48e426505254b00149`
 
 **中文摘要（5 行）**
 给 AI agent 一张「有额度、有到期、可撤销」的会话卡；agent 按次付费调 API，payer 可以零 gas（EIP-3009 签名），
@@ -63,6 +63,8 @@ Contract surface (v2, 3,189 bytes):
 | `createCard(spender, merchant, cap, expiry, salt)` | payer | cardId is derived, not assigned |
 | `charge(cardId, resourceId, units, receiptHash)` | spender | cap, expiry, merchant binding, resource active |
 | `chargeWithAuthorization(..., Authorization)` | spender | same guards + EIP-3009 signature bound to card & amount |
+| `createAnyMerchantCard(spender, cap, expiry, salt)` | payer | a card any listed merchant may charge |
+| `refund(cardId, amount, reason)` | merchant | sends tUSD8 back to the payer and re-opens that budget |
 | `revokeCard(cardId)` | payer or spender | takes effect on the next charge |
 | `remaining(cardId)`, `cards(cardId)`, `receiptCount()` | anyone | dashboard needs no indexer |
 
@@ -88,6 +90,7 @@ Three settlement modes, one set of guards:
 | `charge` | agent (spender) | agent | autonomous agent, payer approved the cap once |
 | `chargeWithAuthorization` | payer, offline (EIP-3009) | agent | payer holds no tQDAY, still approves every payment |
 | 4337 `userOp` | session key (agent) | agent / relayer | payer wants a smart account with a scoped key |
+| 4337 `userOp` + paymaster | session key + sponsor signature | **the paymaster** | the account has no tQDAY at all and the agent pays nothing |
 
 ## 5. What is new here
 
@@ -129,7 +132,7 @@ Three settlement modes, one set of guards:
 | 4337 session key tries `transfer` | `0xeecda1415d1736e267d9a1e87c60c827327774d46245c8b72104f56bf96c1826` status 0 |
 
 Machine-written evidence: `evidence/x402-*.jsonl` (one line per step: ms, gas, receipt index).
-CI: 20 Foundry tests + 5 SDK tests, green on every push.
+CI: 33 Foundry tests + 5 SDK tests, green on every push.
 
 **Evidence layers — these do not replace each other.**
 `forge test` proves the contract logic; the testnet transactions above prove the flow works on QDay;

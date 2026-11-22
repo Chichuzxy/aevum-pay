@@ -69,16 +69,56 @@ async function verifyPayment(txHash, prompt) {
   return { ok: false, reason: "no_matching_charge" };
 }
 
-/** Deterministic stand-in for a model: same prompt -> same tokens. Clearly labelled in the response. */
-function stubInference(prompt, receiptIndex) {
+/**
+ * Real inference through a local Ollama server, with an honest fallback.
+ * If Ollama is not running (or the model is missing), the response says so and returns the
+ * deterministic stub — the payment rail never pretends to be a model.
+ */
+const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://127.0.0.1:11434";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "qwen2.5:0.5b";
+const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS ?? 30000);
+
+function stubInference(prompt) {
   const tokens = prompt
     .toLowerCase()
     .replace(/[^a-z0-9 ]/g, "")
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 8)
-    .map((word, i) => ({ token: `${word.slice(0, 6)}-${((i + 1) * 7 + Number(receiptIndex ?? 0)) % 97}`, p: Number((0.99 - i * 0.05).toFixed(2)) }));
-  return { model: "aevum-stub-1", tokens, note: "deterministic stub — the metered payment is the real part of this demo" };
+    .map((word, i) => `${word.slice(0, 6)}-${((i + 1) * 7) % 97}`);
+  return { model: "aevum-stub-1", source: "stub", text: tokens.join(", "), tokens };
+}
+
+async function infer(prompt) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${OLLAMA_URL}/api/generate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        prompt: `Answer in at most two sentences.\n\n${prompt}`,
+        stream: false,
+        options: { num_predict: 90, temperature: 0.4 },
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`ollama HTTP ${res.status}`);
+    const data = await res.json();
+    return {
+      model: OLLAMA_MODEL,
+      source: "ollama",
+      text: (data.response ?? "").trim(),
+      evalCount: data.eval_count ?? null,
+      evalMs: data.eval_duration ? Math.round(Number(data.eval_duration) / 1e6) : null,
+    };
+  } catch (error) {
+    console.warn(`inference fell back to stub: ${error.message}`);
+    return { ...stubInference(prompt), note: "Ollama was unreachable, so this answer is the deterministic stub" };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 const json = (res, status, body) => {
@@ -120,7 +160,7 @@ const server = createServer(async (req, res) => {
       return json(res, 402, { error: "payment_invalid", reason: verdict.reason, retry: challenge() });
     }
     return json(res, 200, {
-      result: stubInference(prompt, verdict.receiptIndex),
+      result: await infer(prompt),
       payment: {
         tx: String(payment),
         amount: formatUnits(verdict.amount, 6),
