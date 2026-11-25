@@ -27,3 +27,7 @@ evidence/*.jsonl
 tools/ffmpeg*
 video/raw/
 video/out/
+
+video/narration/*.mp3
+video/.selftest/
+video/.tmp/

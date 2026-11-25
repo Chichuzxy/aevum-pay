@@ -1,0 +1,46 @@
+{
+  "_note": "Final narration text, one entry per recorded segment. Keep >= 2:05 total when read at ~150 wpm. Regenerate audio with: python video/tts.py",
+  "voice": "en-US-AriaNeural",
+  "segments": [
+    {
+      "seg": 1,
+      "screen": "browser: merchant dashboard, pointer drifts down the Tx column",
+      "en": "Every API call an agent makes has to be paid for. Today that means either a bare transfer, with no budget and no invoice, or a balance inside one vendor's database, which nobody can audit.",
+      "zh": "agent 每调一次 API 都要付钱。现在要么是裸转账——没有额度、没有发票；要么是存在厂商数据库里的预充值——谁也审计不了。"
+    },
+    {
+      "seg": 2,
+      "screen": "browser: open a card, two MetaMask confirmations, back to Cards",
+      "en": "So we give the agent a card. One merchant, one spending cap, one expiry, and revocable at any moment. The payer approves the cap once; the contract creates the card; the agent can spend inside it, and not one unit more.",
+      "zh": "所以我们给 agent 一张卡：一个商户、一个额度、一个到期时间，随时可撤销。付款人授权一次额度，合约建卡，agent 只能在卡内花钱，多一个单位都不行。"
+    },
+    {
+      "seg": 3,
+      "screen": "terminal: node demo/x402/agent.mjs until CapExceeded and the forged-receipt refusal",
+      "en": "Here is the loop. The API answers four oh two, payment required, with a price. The agent pays from the card: one transaction, about a hundred thousand gas, roughly a ten-thousandth of a t Q day. The merchant checks the receipt event on chain before it serves the result, in about one hundred and eighty milliseconds. One block, one second. When the budget runs out, the chain refuses, you can see status zero, and a forged receipt gets a four oh two, not data.",
+      "zh": "这就是闭环。API 返回 402 和报价，agent 从卡里付款：一笔交易、约十万 gas、大约万分之一 tQDAY。商户先在链上核对收据事件，约 180 毫秒，一个区块一秒。预算花完，链上直接拒绝，你能看到 status 0；拿假交易哈希换不到数据。"
+    },
+    {
+      "seg": 4,
+      "screen": "browser: merchant refresh, receipts multiply, CSV export",
+      "en": "Those rows are chain events, not our database. Every line links to the explorer, and the whole table exports as CSV, the reconciliation a finance team actually needs.",
+      "zh": "这些行是链上事件，不是我们的数据库。每一行都能点进区块浏览器，整张表可以导出 CSV，这是财务真正需要的对账。"
+    },
+    {
+      "seg": 5,
+      "screen": "browser: revoke the card, badge turns revoked; terminal: gasless demo showing unchanged payer counts",
+      "en": "And if the agent goes wrong, the payer revokes the card, and the next charge is refused. The other mode is gasless: the payer signs an E I P three thousand nine authorisation offline, the agent submits it, and the payer's transaction count and balance never move. Contract, transactions and receipts are all in the repository.",
+      "zh": "如果 agent 出问题，付款人撤销卡片，下一次扣款直接被拒。另一种模式免 gas：付款人离线签 EIP-3009 授权，agent 提交，付款人的交易数和余额都不变。合约、交易、收据全在仓库里。"
+    }
+  ],
+  "intro": {
+    "screen": "title card (generated)",
+    "en": "AevumPay gives an AI agent a budget it cannot exceed, and gives the merchant a receipt that cannot be faked. Here is the whole loop.",
+    "zh": "AevumPay 给 AI agent 一个花不超的预算，给商户一张伪造不了的收据。下面是完整闭环。"
+  },
+  "outro": {
+    "screen": "outro links (generated)",
+    "en": "The contract, the live app and the SDK are in the repository. The demo and every transaction you just saw are public on the QDay Aevum testnet.",
+    "zh": "合约、在线应用和 SDK 都在仓库里。演示与刚才每一笔交易都在 QDay Aevum 测试网公开可查。"
+  }
+}
