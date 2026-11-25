@@ -192,6 +192,7 @@ docs/PRACTICE.md              runbook for rehearsing the demo before recording
 docs/RECORDING.md             shot list for the 2.5-minute video
 docs/VIDEO.md                 how the video is assembled (segments + narration, no drift)
 docs/VIDEO-PLAN.md            narration script per segment (EN) + zh subtitles + TTS plan
+deck/                        pitch deck (pptx + pdf) and the Chinese speaking script
 video/build.mjs               deterministic assembly: normalise, sync per narration, subs, mix
 evidence/                     machine-written JSONL from the demo runs
 ```
