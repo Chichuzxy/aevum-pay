@@ -31,3 +31,4 @@ video/out/
 video/narration/*.mp3
 video/.selftest/
 video/.tmp/
+video/raw/

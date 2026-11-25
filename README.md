@@ -190,6 +190,7 @@ scripts/4337-demo.mjs         session key userOp + a rejected misuse
 docs/BUSINESS.md              unit economics, buyers, honest limits
 docs/PRACTICE.md              runbook for rehearsing the demo before recording
 docs/RECORDING.md             shot list for the 2.5-minute video
+docs/RECORDING-RUNBOOK.md     step-by-step recording runbook (servers, timings, checks)
 docs/VIDEO.md                 how the video is assembled (segments + narration, no drift)
 docs/VIDEO-PLAN.md            narration script per segment (EN) + zh subtitles + TTS plan
 deck/                        pitch deck (pptx + pdf) and the Chinese speaking script
