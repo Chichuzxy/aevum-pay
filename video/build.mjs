@@ -198,8 +198,18 @@ const attach = (name, block) => {
 attach("intro", introBlock);
 attach("outro", outroBlock);
 
-const finalFile = join(outDir, "aevumpay-demo.mp4");
-run(["-y", "-i", bedded, "-c", "copy", finalFile]);
+const baseFile = join(outDir, process.env.OUT_NAME ?? "aevumpay-demo.mp4");
+run(["-y", "-i", bedded, "-c", "copy", baseFile]);
+let finalFile = baseFile;
+const burn = process.env.BURN_SRT;
+if (burn && existsSync(burn)) {
+  finalFile = join(outDir, process.env.OUT_BURNED ?? "aevumpay-demo-subs.mp4");
+  const escaped = burn.replace(/\\/g, "/").replace(/:/g, "\\:");
+  run(["-y", "-i", baseFile, "-vf",
+    `subtitles='${escaped}':force_style='Fontname=Arial,Fontsize=19,Outline=0.7,Shadow=0,MarginV=46',`,
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-c:a", "copy", finalFile]);
+  console.log(`burned subtitles -> ${finalFile}`);
+}
 const enSrt = srtFor("en", 62);
 const zhSrt = srtFor("zh", 18);
 if (enSrt) writeFileSync(join(outDir, "aevumpay-demo.srt"), enSrt);
